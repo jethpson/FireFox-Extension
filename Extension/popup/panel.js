@@ -1,0 +1,195 @@
+const API_URL = "https://YOUR_GATEWAY.azure-api.net/shows/today";
+
+const showList   = document.getElementById("show-list");
+const mainView   = document.getElementById("main-view");
+const authView   = document.getElementById("auth-view");
+const signInBtn  = document.getElementById("sign-in-btn");
+const manageBtn  = document.getElementById("manage-btn");
+const signOutBtn = document.getElementById("sign-out-btn");
+
+async function getStoredToken() 
+{
+
+  const stored = await browser.storage.local.get("authToken");
+  return stored.authToken ?? null;
+}
+
+async function storeToken(token) 
+{
+
+  await browser.storage.local.set({ authToken: token });
+}
+
+async function clearToken() 
+{
+
+  await browser.storage.local.remove("authToken");
+}
+
+function openSignInPage() 
+{
+
+  browser.tabs.create({ url: "https://YOUR_AUTH_ENDPOINT/authorize" });
+}
+
+function showAuthView() 
+{
+
+  authView.style.display  = "flex";
+  mainView.style.display  = "none";
+}
+
+function showMainView() 
+{
+
+  authView.style.display  = "none";
+  mainView.style.display  = "block";
+}
+
+function todayString() 
+{
+
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function renderSchedule(shows) 
+{
+
+  showList.innerHTML = "";
+
+  if (!shows || shows.length === 0) 
+  {
+
+    showList.innerHTML = `<li class="loading">No shows scheduled for today.</li>`;
+    return;
+  }
+
+  shows.forEach(show => {
+    const name     = show.name     || show.title       || "Unknown title";
+    const time     = show.airTime  || show.time         || "Time TBD";
+    const platform = show.platform || show.service      || "Unknown platform";
+    const episode  = show.episode  || show.episodeTitle || null;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${name}</strong><br>
+      <small>${time} · ${platform}</small>
+      ${episode ? `<br><small style="opacity:0.7">Ep: ${episode}</small>` : ""}
+    `;
+    showList.appendChild(li);
+  });
+}
+
+function renderError(message) 
+{
+
+  showList.innerHTML = `<li class="loading" style="color:#c0392b;">⚠ ${message}</li>`;
+}
+
+async function fetchSchedule(token) 
+{
+
+  const response = await fetch(API_URL, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    }
+  });
+
+  if (response.status === 401) 
+  {
+
+    await clearToken();
+    showAuthView();
+    return;
+  }
+
+  if (!response.ok) throw new Error(`Server returned ${response.status}`);
+
+  const data  = await response.json();
+  const shows = Array.isArray(data) ? data : data.shows ?? data.results ?? [];
+
+  await browser.storage.local.set({
+    cachedShows: shows,
+    lastFetchedDate: todayString()
+  });
+
+  return shows;
+}
+
+async function init() 
+{
+
+  const token = await getStoredToken();
+
+  if (!token) 
+  {
+
+    showAuthView();
+    return;
+  }
+
+  showMainView();
+  showList.innerHTML = `<li class="loading">Loading schedule…</li>`;
+
+  try 
+  {
+
+    const stored = await browser.storage.local.get(["cachedShows", "lastFetchedDate"]);
+    const today  = todayString();
+
+    if (stored.lastFetchedDate === today && stored.cachedShows?.length) 
+    {
+
+      renderSchedule(stored.cachedShows);
+      return;
+    }
+
+    const shows = await fetchSchedule(token);
+    if (shows) renderSchedule(shows);
+
+  } catch (err) 
+  {
+
+    console.error("init failed:", err);
+    const stored = await browser.storage.local.get("cachedShows");
+    if (stored.cachedShows) 
+    {
+
+      renderError("Couldn't refresh — showing cached data.");
+      renderSchedule(stored.cachedShows);
+    } else 
+    {
+
+      renderError("Couldn't reach the server.");
+    }
+  }
+}
+
+signInBtn.addEventListener("click", openSignInPage);
+
+signOutBtn.addEventListener("click", async () => {
+  await clearToken();
+  showAuthView();
+});
+
+manageBtn.addEventListener("click", () => {
+  browser.tabs.create({ url: browser.runtime.getURL("manage/manage.html") });
+});
+
+browser.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "DAILY_FETCH_DONE") 
+  {
+
+    browser.storage.local.get("cachedShows").then(s => renderSchedule(s.cachedShows));
+  }
+  if (msg.type === "AUTH_SUCCESS") 
+  {
+
+    storeToken(msg.token).then(init);
+  }
+});
+
+document.addEventListener("DOMContentLoaded", init);

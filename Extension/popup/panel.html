@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Scheduler</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+
+  <!-- Auth view — shown when no token -->
+  <div id="auth-view">
+    <h2>Media Scheduler</h2>
+    <p>Sign in to see your scheduled shows.</p>
+    <button id="sign-in-btn">Sign in / Sign up</button>
+  </div>
+
+  <!-- Main view — shown when logged in -->
+  <div id="main-view" style="display:none;">
+    <header>
+      <h2>Media Scheduler</h2>
+      <button id="sign-out-btn" class="btn-link">Sign out</button>
+    </header>
+    <main>
+      <section class="schedule-section">
+        <h3>Upcoming shows</h3>
+        <ul id="show-list">
+          <li class="loading">Loading schedule…</li>
+        </ul>
+      </section>
+      <section class="actions">
+        <button id="manage-btn">Manage shows</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Environment / secrets
+appsettings.Development.json
+*.env
+.env
+
+# Node / TypeScript
+node_modules/
+dist/
+
+# VS Code
+.vscode/

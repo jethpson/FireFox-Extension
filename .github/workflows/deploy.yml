@@ -33,3 +33,14 @@ jobs:
             --resource-group media_tracker-rg \
             --image animetrackerregistry.azurecr.io/user-service:${{ github.sha }} \
             --revision-suffix staging-${{ github.run_number }}
+
+      - name: Deactivate old revisions
+        run: |
+          az containerapp revision list \
+            --name user-service \
+            --resource-group media_tracker-rg \
+            --query "[?properties.active==false].name" \
+            --output tsv | xargs -I {} az containerapp revision deactivate \
+            --name user-service \
+            --resource-group media_tracker-rg \
+            --revision {}

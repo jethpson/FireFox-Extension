@@ -1,4 +1,4 @@
-const API_URL = "https://YOUR_GATEWAY.azure-api.net/shows/today";
+const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io";
 
 const showList   = document.getElementById("show-list");
 const mainView   = document.getElementById("main-view");
@@ -24,12 +24,6 @@ async function clearToken()
 {
 
   await browser.storage.local.remove("authToken");
-}
-
-function openSignInPage() 
-{
-
-  browser.tabs.create({ url: "https://YOUR_AUTH_ENDPOINT/authorize" });
 }
 
 function showAuthView() 
@@ -67,8 +61,8 @@ function renderSchedule(shows)
 
   shows.forEach(show => {
     const name     = show.name     || show.title       || "Unknown title";
-    const time     = show.airTime  || show.time         || "Time TBD";
-    const platform = show.platform || show.service      || "Unknown platform";
+    const time     = show.airTime  || show.time        || "Time TBD";
+    const platform = show.platform || show.service     || "Unknown platform";
     const episode  = show.episode  || show.episodeTitle || null;
 
     const li = document.createElement("li");
@@ -90,7 +84,7 @@ function renderError(message)
 async function fetchSchedule(token) 
 {
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(`${API_URL}/api/schedule/today`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -168,7 +162,9 @@ async function init()
   }
 }
 
-signInBtn.addEventListener("click", openSignInPage);
+signInBtn.addEventListener("click", () => {
+  browser.runtime.sendMessage({ type: "START_AUTH" });
+});
 
 signOutBtn.addEventListener("click", async () => {
   await clearToken();
@@ -187,7 +183,7 @@ browser.runtime.onMessage.addListener((msg) => {
   }
   if (msg.type === "AUTH_SUCCESS") 
   {
-
+    
     storeToken(msg.token).then(init);
   }
 });

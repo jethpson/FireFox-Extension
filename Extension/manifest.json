@@ -5,30 +5,27 @@
   "version": "1.0",
   "browser_specific_settings": {
     "gecko": {
+      "id": "media-scheduler@jakethompson.dev",
       "strict_min_version": "54.0a1"
     }
   },
-
   "browser_action": {
-  "default_icon": "icons/icon.png",
-  "default_title": "Media Scheduler",
-  "default_popup": "popup/panel.html",
-  "browser_style": false
-},
-
+    "default_icon": "icons/icon.png",
+    "default_title": "Media Scheduler",
+    "default_popup": "popup/panel.html",
+    "browser_style": false
+  },
   "permissions": [
     "storage",
     "tabs",
     "identity",
-    "webNavigation"
+    "webNavigation",
+    "alarms",
+    "notifications",
+    "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io/*"
   ],
-
   "background": {
-    "scripts": ["Extension/background.js"],
+    "scripts": ["background.js"],
     "persistent": false
-  },
-
-  "host_permissions": [
-    "api gateway link from azure here ig"
-  ]
+  }
 }

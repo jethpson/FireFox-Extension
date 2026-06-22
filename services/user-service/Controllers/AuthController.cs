@@ -11,16 +11,19 @@ namespace user_service.Controllers;
 [Authorize]
 public class AuthController : ControllerBase
 {
+
     private readonly AppDbContext _db;
 
     public AuthController(AppDbContext db)
     {
+
         _db = db;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login()
     {
+
         var entraId = User.FindFirstValue("oid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = User.FindFirstValue("preferred_username") ?? User.FindFirstValue(ClaimTypes.Email);
 
@@ -30,12 +33,15 @@ public class AuthController : ControllerBase
 
         if (user == null)
         {
+
             user = new User
             {
+
                 EntraId = entraId,
                 Email = email ?? string.Empty,
                 CreatedAt = DateTime.UtcNow
             };
+            
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
         }

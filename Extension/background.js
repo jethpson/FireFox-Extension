@@ -1,4 +1,7 @@
-const API_URL = "https://YOUR_GATEWAY.azure-api.net/shows/today";
+const CLIENT_ID = "ea1f8538-33ce-49ba-babb-09ccd11b1e5e";
+const TENANT_ID = "102d9167-6ab2-43be-81a9-353e194b8ee9";
+const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io";
+const SCOPE = `openid profile email`;
 
 function todayString() 
 {
@@ -7,17 +10,63 @@ function todayString()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+async function signIn() 
+{
+
+  const redirectURL = browser.identity.getRedirectURL();
+
+const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` +
+    `?client_id=${CLIENT_ID}` +
+    `&response_type=token` +
+    `&redirect_uri=${encodeURIComponent(redirectURL)}` +
+    `&scope=${encodeURIComponent(SCOPE)}` +
+    `&response_mode=fragment`;
+
+  try 
+  {
+
+    const responseURL = await browser.identity.launchWebAuthFlow({
+      url: authURL,
+      interactive: true
+    });
+
+    const params = new URLSearchParams(new URL(responseURL).hash.slice(1));
+    const token = params.get("access_token");
+
+    if (!token) throw new Error("No token in response");
+
+    await browser.storage.local.set({ authToken: token });
+
+    await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    browser.runtime.sendMessage({ type: "AUTH_SUCCESS", token });
+
+  } catch (err) 
+  {
+
+    console.error("Sign in failed:", err);
+  }
+}
+
 async function fetchAndUpdateBadge() 
 {
 
   try 
   {
 
-    const response = await fetch(API_URL, {
+    const stored = await browser.storage.local.get("authToken");
+    const token = stored.authToken;
+
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/schedule/today`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        // "Ocp-Apim-Subscription-Key": "YOUR_KEY"
+        "Authorization": `Bearer ${token}`
       }
     });
 
@@ -60,10 +109,18 @@ async function initOnStartup()
     browser.browserAction.setBadgeBackgroundColor({ color: "#e74c3c" });
   } else 
   {
-    
+
     await fetchAndUpdateBadge();
   }
 }
+
+browser.runtime.onMessage.addListener(async (msg) => {
+  if (msg.type === "START_AUTH") 
+  {
+    
+    await signIn();
+  }
+});
 
 browser.runtime.onInstalled.addListener(() => {
   console.log("Media Scheduler initialized.");

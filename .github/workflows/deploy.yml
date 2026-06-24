@@ -33,6 +33,13 @@ jobs:
             --resource-group media_tracker-rg \
             --image animetrackerregistry.azurecr.io/user-service:${{ github.sha }} \
             --revision-suffix staging-${{ github.run_number }}
+        
+      - name: Swap staging to production
+        run: |
+          az containerapp ingress traffic set \
+            --name user-service \
+            --resource-group media_tracker-rg \
+            --revision-weight user-service--staging-${{ github.run_number }}=100
 
       - name: Deactivate old revisions
         run: |

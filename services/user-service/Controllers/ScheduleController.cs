@@ -58,50 +58,59 @@ public class ScheduleController : ControllerBase
     }
 
     [HttpPost("seed-catalog")]
-    public async Task<IActionResult> SeedCatalog()
+    public async Task<IActionResult> SeedCatalog([FromQuery] int startPage = 1)
     {
         var client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", "Bearer PZ5V2e7A4o49aM77apjz5JJ6MHrqee");
         
-        int page = 1;
+        int page = startPage;
         int total = 0;
         string cdnBase = "https://img.animeschedule.net/production/assets/public/img/anime/jpg/default/";
 
         while (true)
         {
-            var response = await client.GetFromJsonAsync<JsonElement>(
-                $"https://animeschedule.net/api/v3/anime?page={page}");
-
-            var animeList = response.GetProperty("anime").EnumerateArray().ToList();
-            if (!animeList.Any()) break;
-
-            foreach (var show in animeList)
+            try
             {
-                var slug = show.GetProperty("route").GetString() ?? "";
-                var title = show.GetProperty("title").GetString() ?? "";
-                var status = show.GetProperty("status").GetString() ?? "";
-                var imageUrl = $"{cdnBase}{slug}.jpg";
+                var response = await client.GetFromJsonAsync<JsonElement>(
+                    $"https://animeschedule.net/api/v3/anime?page={page}");
 
-                var exists = await _db.AnimeCatalog.AnyAsync(a => a.Slug == slug);
-                if (!exists)
+                var animeList = response.GetProperty("anime").EnumerateArray().ToList();
+                if (!animeList.Any()) break;
+
+                foreach (var show in animeList)
                 {
-                    _db.AnimeCatalog.Add(new user_service.Models.AnimeCatalog
-                    {
-                        Slug = slug,
-                        Title = title,
-                        ImageUrl = imageUrl,
-                        Status = status,
-                        UpdatedAt = DateTime.UtcNow
-                    });
-                }
-            }
+                    var slug = show.GetProperty("route").GetString() ?? "";
+                    var title = show.GetProperty("title").GetString() ?? "";
+                    var status = show.GetProperty("status").GetString() ?? "";
+                    var imageUrl = $"{cdnBase}{slug}.jpg";
 
-            await _db.SaveChangesAsync();
-            total += animeList.Count;
-            page++;
-            await Task.Delay(500);
+                    var exists = await _db.AnimeCatalog.AnyAsync(a => a.Slug == slug);
+                    if (!exists)
+                    {
+                        _db.AnimeCatalog.Add(new user_service.Models.AnimeCatalog
+                        {
+                            Slug = slug,
+                            Title = title,
+                            ImageUrl = imageUrl,
+                            Status = status,
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+                total += animeList.Count;
+                Console.WriteLine($"Page {page} done — {total} processed this run");
+                page++;
+                await Task.Delay(500);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error on page {page}: {ex.Message}");
+                return Ok(new { total, stoppedAtPage = page, error = ex.Message });
+            }
         }
 
-        return Ok(new { total });
+        return Ok(new { total, completed = true });
     }
 }

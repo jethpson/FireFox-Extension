@@ -41,6 +41,20 @@ jobs:
             --resource-group media_tracker-rg \
             --revision-weight user-service--staging-${{ github.run_number }}=100
 
+      # Schedule Sync Function
+      - name: Build and push schedule-sync-function
+        run: |
+          docker build -t animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }} ./services/schedule-sync-function
+          docker push animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }}
+
+      - name: Deploy schedule-sync-function
+        run: |
+          az containerapp update \
+            --name schedule-sync-function \
+            --resource-group media_tracker-rg \
+            --image animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }} \
+            --revision-suffix staging-${{ github.run_number }}
+
       - name: Deactivate old revisions
         run: |
           az containerapp revision list \

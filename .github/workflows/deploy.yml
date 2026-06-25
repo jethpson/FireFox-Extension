@@ -21,40 +21,41 @@ jobs:
       - name: Log in to Azure Container Registry
         run: az acr login --name animetrackerregistry
 
-      - name: Build and push Docker image
+      # User Service
+      - name: Build and push user-service
         run: |
           docker build -t animetrackerregistry.azurecr.io/user-service:${{ github.sha }} ./services/user-service
           docker push animetrackerregistry.azurecr.io/user-service:${{ github.sha }}
 
-      - name: Deploy to staging
+      - name: Deploy user-service to staging
         run: |
           az containerapp update \
             --name user-service \
             --resource-group media_tracker-rg \
             --image animetrackerregistry.azurecr.io/user-service:${{ github.sha }} \
             --revision-suffix staging-${{ github.run_number }}
-        
-      - name: Swap staging to production
+
+      - name: Swap user-service to production
         run: |
           az containerapp ingress traffic set \
             --name user-service \
             --resource-group media_tracker-rg \
             --revision-weight user-service--staging-${{ github.run_number }}=100
 
-      # Schedule Sync Function
-      - name: Build and push schedule-sync-function
+      # Schedule Sync Job
+      - name: Build and push schedule-sync-job
         run: |
           docker build -t animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }} ./services/schedule-sync-function
           docker push animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }}
 
-      - name: Deploy schedule-sync-function
+      - name: Update schedule-sync-job
         run: |
-          az containerapp update \
-            --name schedule-sync-function \
+          az containerapp job update \
+            --name schedule-sync-job \
             --resource-group media_tracker-rg \
-            --image animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }} \
-            --revision-suffix staging-${{ github.run_number }}
+            --image animetrackerregistry.azurecr.io/schedule-sync-function:${{ github.sha }}
 
+      # Cleanup
       - name: Deactivate old revisions
         run: |
           az containerapp revision list \

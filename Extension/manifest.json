@@ -16,13 +16,14 @@
     "browser_style": false
   },
   "permissions": [
-    "storage",
-    "tabs",
-    "identity",
-    "webNavigation",
-    "alarms",
-    "notifications",
-    "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io/*"
+  "storage",
+  "tabs",
+  "identity",
+  "webNavigation",
+  "alarms",
+  "notifications",
+  "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io/*",
+  "https://img.animeschedule.net/*"
   ],
   "background": {
     "scripts": ["background.js"],

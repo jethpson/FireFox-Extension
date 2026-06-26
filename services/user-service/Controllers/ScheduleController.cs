@@ -40,7 +40,20 @@ public class ScheduleController : ControllerBase
 
         return Ok(schedule);
     }
+    [HttpGet("image")]
+    public async Task<IActionResult> ProxyImage([FromQuery] string url)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Referer", "https://animeschedule.net/");
+        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 
+        var response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode) return NotFound();
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        var contentType = response.Content.Headers.ContentType?.ToString() ?? "image/jpeg";
+        return File(bytes, contentType);
+    }
     [HttpGet("catalog")]
     public async Task<IActionResult> GetCatalog([FromQuery] string? search)
     {

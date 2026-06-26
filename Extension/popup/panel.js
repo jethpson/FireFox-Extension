@@ -49,27 +49,32 @@ function todayString()
 
 function renderSchedule(shows) 
 {
-
   showList.innerHTML = "";
 
   if (!shows || shows.length === 0) 
   {
-
     showList.innerHTML = `<li class="loading">No shows scheduled for today.</li>`;
     return;
   }
 
   shows.forEach(show => {
-    const name     = show.name     || show.title       || "Unknown title";
-    const time     = show.airTime  || show.time        || "Time TBD";
-    const platform = show.platform || show.service     || "Unknown platform";
-    const episode  = show.episode  || show.episodeTitle || null;
+    const title   = show.title || "Unknown title";
+    const episode = show.episodeNumber || "?";
+    const image = show.imageUrl 
+    ? `${API_URL}/api/schedule/image?url=${encodeURIComponent(show.imageUrl)}`
+    : "";
+    const slug    = show.slug || "";
 
     const li = document.createElement("li");
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.gap = "10px";
     li.innerHTML = `
-      <strong>${name}</strong><br>
-      <small>${time} · ${platform}</small>
-      ${episode ? `<br><small style="opacity:0.7">Ep: ${episode}</small>` : ""}
+      <img src="${image}" alt="${title}" style="width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;">
+      <div>
+        <strong>${title}</strong><br>
+        <small>Episode ${episode}</small>
+      </div>
     `;
     showList.appendChild(li);
   });

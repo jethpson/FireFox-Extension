@@ -15,7 +15,7 @@ var httpFactory = provider.GetRequiredService<IHttpClientFactory>();
 var http = httpFactory.CreateClient();
 
 const string API_TOKEN = "PZ5V2e7A4o49aM77apjz5JJ6MHrqee";
-const string CDN_BASE = "https://img.animeschedule.net/production/assets/public/img/anime/jpg/default/";
+const string CDN_BASE = "https://img.animeschedule.net/production/assets/public/img/";
 
 http.DefaultRequestHeaders.Add("Authorization", $"Bearer {API_TOKEN}");
 http.DefaultRequestHeaders.Add("Accept", "application/json");
@@ -41,22 +41,34 @@ foreach (var item in data.EnumerateArray())
     var title = item.GetProperty("title").GetString() ?? "Unknown";
     var episode = item.GetProperty("episodeNumber").GetInt32();
     var slug = item.GetProperty("route").GetString() ?? "";
+    var imageVersionRoute = item.TryGetProperty("imageVersionRoute", out var ivr) 
+        ? ivr.GetString() ?? "" 
+        : "";
+    var imageUrl = string.IsNullOrEmpty(imageVersionRoute)
+        ? $"{CDN_BASE}anime/jpg/default/{slug}.jpg"
+        : $"{CDN_BASE}{imageVersionRoute}";
 
     var key = (slug, episode);
     if (seen.Contains(key)) continue;
     seen.Add(key);
 
-    var exists = await db.AnimeCatalog.AnyAsync(a => a.Slug == slug);
-    if (!exists)
+    // Update or insert into catalog with correct image URL
+    var existing = await db.AnimeCatalog.FirstOrDefaultAsync(a => a.Slug == slug);
+    if (existing == null)
     {
         db.AnimeCatalog.Add(new AnimeCatalog
         {
             Slug = slug,
             Title = title,
-            ImageUrl = $"{CDN_BASE}{slug}.jpg",
+            ImageUrl = imageUrl,
             Status = "airing",
             UpdatedAt = DateTime.UtcNow
         });
+    }
+    else
+    {
+        existing.ImageUrl = imageUrl;
+        existing.UpdatedAt = DateTime.UtcNow;
     }
 
     var scheduleExists = await db.DailySchedule.AnyAsync(

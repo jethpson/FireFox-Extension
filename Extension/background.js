@@ -62,7 +62,7 @@ async function fetchAndUpdateBadge()
 
     if (!token) return;
 
-    const response = await fetch(`${API_URL}/api/schedule/today`, {
+    const response = await fetch(`${API_URL}/api/schedule/my-today`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

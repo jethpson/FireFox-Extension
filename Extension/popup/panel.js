@@ -60,9 +60,7 @@ function renderSchedule(shows)
   shows.forEach(show => {
     const title   = show.title || "Unknown title";
     const episode = show.episodeNumber || "?";
-    const image = show.imageUrl 
-    ? `${API_URL}/api/schedule/image?url=${encodeURIComponent(show.imageUrl)}`
-    : "";
+    const image = show.imageUrl || "";
     const slug    = show.slug || "";
 
     const li = document.createElement("li");
@@ -89,7 +87,7 @@ function renderError(message)
 async function fetchSchedule(token) 
 {
 
-  const response = await fetch(`${API_URL}/api/schedule/today`, {
+  const response = await fetch(`${API_URL}/api/schedule/my-today`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

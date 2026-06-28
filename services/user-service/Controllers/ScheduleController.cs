@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace user_service.Controllers;
 
@@ -52,6 +54,52 @@ public class ScheduleController : ControllerBase
             .ToListAsync();
 
         return Ok(results);
+    }
+
+    [HttpGet("my-today")]
+    [Authorize]
+    public async Task<IActionResult> GetMyToday()
+    {
+        var entraId = User.FindFirstValue("oid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (entraId == null) return Unauthorized();
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.EntraId == entraId);
+        if (user == null) return Unauthorized();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Get today's schedule for only the user's tracked series
+        var myShows = await _db.DailySchedule
+            .Where(s => s.AirDate == today)
+            .Join(_db.AnimeCatalog,
+                s => s.Slug,
+                a => a.Slug,
+                (s, a) => new { s, a })
+            .Join(_db.TrackedSeries.Where(t => t.UserId == user.Id),
+                sa => sa.s.Slug,
+                t => t.Slug,
+                (sa, t) => new { sa.s, sa.a })
+            .Select(x => new
+            {
+                x.a.Title,
+                x.a.Slug,
+                x.a.ImageUrl,
+                x.s.EpisodeNumber,
+                x.s.AirDate
+            })
+            .ToListAsync();
+
+        // Filter out watched episodes (5+ minutes)
+        var watchedEpisodes = await _db.WatchHistory
+            .Where(w => w.UserId == user.Id && w.MinutesWatched >= 5)
+            .Select(w => new { w.Slug, w.EpisodeNumber })
+            .ToListAsync();
+
+        var unwatched = myShows
+            .Where(s => !watchedEpisodes.Any(w => w.Slug == s.Slug && w.EpisodeNumber == s.EpisodeNumber))
+            .ToList();
+
+        return Ok(unwatched);
     }
 
     [HttpPost("seed-catalog")]

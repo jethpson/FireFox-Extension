@@ -1,9 +1,7 @@
-const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io/api/schedule/today";
+const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io/api/schedule/catalog";
 
 const searchInput      = document.getElementById("search-input");
 const resultsContainer = document.getElementById("results-container");
-
-let allShows = [];
 
 function renderShows(shows) {
   resultsContainer.innerHTML = "";
@@ -14,21 +12,22 @@ function renderShows(shows) {
   }
 
   shows.forEach(show => {
-    const name     = show.name     || show.title    || "Unknown";
-    const time     = show.airTime  || show.time      || "TBD";
-    const platform = show.platform || show.service   || "";
-    const episode  = show.episode  || show.episodeTitle || null;
+    const title   = show.title || "Unknown";
+    const slug    = show.slug || "";
+    const image   = show.imageUrl || "";
+    const status  = show.status || "";
 
     const card = document.createElement("div");
     card.className = "show-card";
     card.innerHTML = `
-      <div class="show-info">
-        <strong>${name}</strong>
-        <small>${time}${platform ? " · " + platform : ""}</small>
-        ${episode ? `<br><small style="opacity:0.7">Ep: ${episode}</small>` : ""}
+      <div style="display:flex;align-items:center;gap:12px;flex:1;">
+        <img src="${image}" alt="${title}" style="width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;">
+        <div class="show-info">
+          <strong>${title}</strong>
+          <small>${status}</small>
+        </div>
       </div>
       <div class="show-actions">
-        <button class="btn btn-ghost">Details</button>
         <button class="btn btn-primary">+ Add</button>
       </div>
     `;
@@ -36,24 +35,14 @@ function renderShows(shows) {
   });
 }
 
-function filterShows(query) {
-  if (!query.trim()) return allShows;
-  const q = query.toLowerCase();
-  return allShows.filter(s =>
-    (s.name || s.title || "").toLowerCase().includes(q) ||
-    (s.platform || s.service || "").toLowerCase().includes(q)
-  );
-}
-
 searchInput.addEventListener("input", () => {
-  renderShows(filterShows(searchInput.value));
+  loadShows(searchInput.value);
 });
 
-async function loadShows() {
+async function loadShows(query = "") {
   resultsContainer.innerHTML = `<p class="status">Loading…</p>`;
 
   try {
-    // Retrieve the auth token saved by the background/popup flow
     const stored = await browser.storage.local.get("authToken");
     const token = stored.authToken;
 
@@ -62,7 +51,11 @@ async function loadShows() {
       return;
     }
 
-    const response = await fetch(API_URL, {
+    const url = query
+      ? `${API_URL}?search=${encodeURIComponent(query)}`
+      : API_URL;
+
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -78,9 +71,9 @@ async function loadShows() {
     if (!response.ok) throw new Error(`Server returned ${response.status}`);
 
     const data = await response.json();
-    allShows   = Array.isArray(data) ? data : data.shows ?? data.results ?? [];
+    const shows = Array.isArray(data) ? data : data.shows ?? data.results ?? [];
 
-    renderShows(allShows);
+    renderShows(shows);
 
   } catch (err) {
     console.error("loadShows failed:", err);
@@ -88,5 +81,4 @@ async function loadShows() {
   }
 }
 
-// Initialize on DOM load
-document.addEventListener("DOMContentLoaded", loadShows);
+document.addEventListener("DOMContentLoaded", () => loadShows());

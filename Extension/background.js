@@ -3,6 +3,14 @@ const TENANT_ID = "102d9167-6ab2-43be-81a9-353e194b8ee9";
 const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io";
 const SCOPE = `openid profile email`;
 
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const json = decodeURIComponent(atob(base64).split('').map(c =>
+    '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+  ).join(''));
+  return JSON.parse(json);
+}
+
 function todayString() 
 {
 
@@ -18,10 +26,11 @@ async function signIn()
 
 const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` +
     `?client_id=${CLIENT_ID}` +
-    `&response_type=token` +
+    `&response_type=id_token` +
     `&redirect_uri=${encodeURIComponent(redirectURL)}` +
     `&scope=${encodeURIComponent(SCOPE)}` +
-    `&response_mode=fragment`;
+    `&response_mode=fragment` +
+    `&nonce=${Math.random().toString(36).substring(2)}`;
 
   try 
   {
@@ -34,7 +43,7 @@ const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`
     console.log("responseURL:", responseURL);
 
     const params = new URLSearchParams(new URL(responseURL).hash.slice(1));
-    const token = params.get("access_token");
+    const token = params.get("id_token");
 
     if (!token) throw new Error("No token in response");
 
@@ -49,6 +58,9 @@ const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`
     });
 
     browser.runtime.sendMessage({ type: "AUTH_SUCCESS", token });
+
+    const payload = parseJwt(token);
+    console.log("Token payload:", payload);
 
   } catch (err) 
   {

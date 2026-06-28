@@ -21,6 +21,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpGet("claims")]
+    [AllowAnonymous]
     public IActionResult GetClaims()
     {
         var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();

@@ -9,9 +9,14 @@ const signOutBtn = document.getElementById("sign-out-btn");
 
 async function getStoredToken() 
 {
-
-  const stored = await browser.storage.local.get("authToken");
-  return stored.authToken ?? null;
+  try {
+    const stored = await browser.storage.local.get("authToken");
+    console.log("Storage result:", JSON.stringify(stored));
+    return stored.authToken ?? null;
+  } catch (err) {
+    console.error("Storage error:", err);
+    return null;
+  }
 }
 
 async function storeToken(token) 
@@ -118,12 +123,14 @@ async function fetchSchedule(token)
 
 async function init() 
 {
-
+  await new Promise(resolve => setTimeout(resolve, 500));
   const token = await getStoredToken();
+  console.log("Storage result:", JSON.stringify(await browser.storage.local.get()));
 
   if (!token) 
   {
-
+    const token = await getStoredToken();
+    console.log("init token:", token ? "found" : "not found");
     showAuthView();
     return;
   }

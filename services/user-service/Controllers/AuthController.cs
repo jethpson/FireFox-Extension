@@ -20,6 +20,13 @@ public class AuthController : ControllerBase
         _db = db;
     }
 
+    [HttpGet("claims")]
+    public IActionResult GetClaims()
+    {
+        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+        return Ok(claims);
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login()
     {

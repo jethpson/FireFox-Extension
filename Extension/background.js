@@ -12,8 +12,9 @@ function todayString()
 
 async function signIn() 
 {
-
+  console.log("signIn started");
   const redirectURL = browser.identity.getRedirectURL();
+  console.log("redirectURL:", redirectURL);
 
 const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize` +
     `?client_id=${CLIENT_ID}` +
@@ -30,12 +31,17 @@ const authURL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`
       interactive: true
     });
 
+    console.log("responseURL:", responseURL);
+
     const params = new URLSearchParams(new URL(responseURL).hash.slice(1));
     const token = params.get("access_token");
 
     if (!token) throw new Error("No token in response");
 
     await browser.storage.local.set({ authToken: token });
+
+    const verify = await browser.storage.local.get("authToken");
+    console.log("Token stored:", verify.authToken ? "yes" : "no");
 
     await fetch(`${API_URL}/api/auth/login`, {
       method: "POST",

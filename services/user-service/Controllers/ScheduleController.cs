@@ -57,7 +57,6 @@ public class ScheduleController : ControllerBase
     }
 
     [HttpGet("my-today")]
-    [Authorize]
     public async Task<IActionResult> GetMyToday()
     {
         var entraId = User.FindFirstValue("oid") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -8,7 +8,6 @@ namespace user_service.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class UserController : ControllerBase
 {
     private readonly AppDbContext _db;

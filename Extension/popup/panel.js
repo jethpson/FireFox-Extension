@@ -102,10 +102,10 @@ async function fetchSchedule(token)
 
   if (response.status === 401) 
   {
-
-    await clearToken();
-    showAuthView();
-    return;
+    return [];
+    //await clearToken();
+    //showAuthView();
+    //return;
   }
 
   if (!response.ok) throw new Error(`Server returned ${response.status}`);

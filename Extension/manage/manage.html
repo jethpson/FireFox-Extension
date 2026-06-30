@@ -1,32 +1,144 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Shows</title>
-  <link rel="stylesheet" href="manage.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #e7e7e7;
+      font-family: Arial, sans-serif;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* LEFT SIDEBAR — daily schedule */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      background: #1c1b22;
+      color: #fbfbfe;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      font-size: 1rem;
+      color: #af4e8a;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #2b2a33;
+    }
+
+    .sidebar-show {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #2b2a33;
+    }
+
+    .sidebar-show img {
+      width: 36px;
+      height: 36px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .sidebar-show-info strong {
+      display: block;
+      font-size: 0.8rem;
+      color: #fbfbfe;
+    }
+
+    .sidebar-show-info small {
+      font-size: 0.7rem;
+      color: #9e9ea8;
+    }
+
+    .sidebar-loading {
+      font-style: italic;
+      color: #9e9ea8;
+      font-size: 0.85rem;
+    }
+
+    /* RIGHT MAIN — search + catalog */
+    .main {
+      flex: 1;
+      padding: 40px;
+      overflow-y: auto;
+    }
+
+    .card {
+      max-width: 600px;
+      padding: 40px 45px;
+      background-color: white;
+      border-radius: 15px;
+      margin: 0 auto;
+    }
+
+    .title {
+      color: #af4e8a;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #6b6b6b;
+      margin-bottom: 24px;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: 1px solid #dadadd;
+      border-radius: 6px;
+      outline: none;
+      margin-bottom: 20px;
+    }
+
+    #search-input:focus {
+      border-color: #af4e8a;
+    }
+
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; }
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Manage shows</h1>
-    <p class="subtitle">Browse and search available shows</p>
-  </header>
+  <div class="layout">
 
-  <main>
-    <div class="search-bar">
-      <input
-        type="text"
-        id="search-input"
-        placeholder="Search shows..."
-        autocomplete="off"
-      />
-    </div>
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <h2>📺 Today's Schedule</h2>
+      <div id="sidebar-schedule">
+        <p class="sidebar-loading">Loading…</p>
+      </div>
+    </aside>
 
-    <div id="results-container">
-      <p class="status">Connect your API to load shows.</p>
-    </div>
-  </main>
+    <!-- RIGHT MAIN -->
+    <main class="main">
+      <div class="card">
+        <h1 class="title">Manage Shows</h1>
+        <p class="subtitle">Browse and search available shows</p>
+        <input type="text" id="search-input" placeholder="Search shows..." autocomplete="off"/>
+        <div id="results-container"></div>
+      </div>
+    </main>
 
+  </div>
   <script src="manage.js"></script>
 </body>
 </html>

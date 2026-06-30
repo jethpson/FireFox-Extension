@@ -19,10 +19,10 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore services/user-service/user-service.csproj
+        run: dotnet restore services/user-service.Tests/user-service.Tests.csproj
 
       - name: Build
-        run: dotnet build services/user-service/user-service.csproj --no-restore
+        run: dotnet build services/user-service.Tests/user-service.Tests.csproj --no-restore
 
       - name: Test
-        run: dotnet test services/user-service/user-service.csproj --no-build --verbosity normal
+        run: dotnet test services/user-service.Tests/user-service.Tests.csproj --no-build --verbosity normal

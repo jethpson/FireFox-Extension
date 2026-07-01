@@ -1,4 +1,6 @@
-export default {
+export default 
+{
+    
   name: "Miruro",
   icon: "🎬",
   canHandle: (anilistId) => !!anilistId,

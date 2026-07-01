@@ -3,7 +3,9 @@ const TENANT_ID = "102d9167-6ab2-43be-81a9-353e194b8ee9";
 const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io";
 const SCOPE = `openid profile email`;
 
-function parseJwt(token) {
+function parseJwt(token) 
+{
+
   const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
   const json = decodeURIComponent(atob(base64).split('').map(c =>
     '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
@@ -20,6 +22,7 @@ function todayString()
 
 async function signIn() 
 {
+
   console.log("signIn started");
   const redirectURL = browser.identity.getRedirectURL();
   console.log("redirectURL:", redirectURL);
@@ -98,6 +101,8 @@ async function fetchAndUpdateBadge()
       lastFetchedDate: todayString()
     });
 
+    await checkAndNotify(shows);
+
     const count = shows.length;
     browser.browserAction.setBadgeText({ text: count > 0 ? String(count) : "" });
     browser.browserAction.setBadgeBackgroundColor({ color: "#e74c3c" });
@@ -113,11 +118,47 @@ async function fetchAndUpdateBadge()
   }
 }
 
+async function checkAndNotify(shows) 
+{
+
+  if (!shows || shows.length === 0) return;
+
+  const stored = await browser.storage.local.get("notifiedToday");
+  const notifiedToday = stored.notifiedToday || [];
+  const today = todayString();
+
+  for (const show of shows) 
+  {
+
+    const key = `${show.slug}-${show.episodeNumber}-${today}`;
+    if (notifiedToday.includes(key)) continue;
+
+    browser.notifications.create(key, {
+      type: "basic",
+      iconUrl: show.imageUrl || "icons/icon.png",
+      title: "New Episode Available",
+      message: `${show.title} — Episode ${show.episodeNumber} is out!`
+    });
+
+    notifiedToday.push(key);
+  }
+
+  await browser.storage.local.set({ notifiedToday });
+}
+
 async function initOnStartup() 
 {
 
+  const notifStored = await browser.storage.local.get(["notifiedToday", "lastFetchedDate"]);
+  const today = todayString();
+
+  if (notifStored.lastFetchedDate && notifStored.lastFetchedDate !== today) 
+  {
+
+    await browser.storage.local.remove("notifiedToday");
+  }
+
   const stored = await browser.storage.local.get(["cachedShows", "lastFetchedDate"]);
-  const today  = todayString();
 
   if (stored.lastFetchedDate === today && stored.cachedShows?.length) 
   {
@@ -135,8 +176,31 @@ async function initOnStartup()
 browser.runtime.onMessage.addListener(async (msg) => {
   if (msg.type === "START_AUTH") 
   {
-    
+
     await signIn();
+  }
+
+  if (msg.type === "WATCHED") 
+  {
+    
+    const stored = await browser.storage.local.get("authToken");
+    const token = stored.authToken;
+    if (!token) return;
+
+    await fetch(`${API_URL}/api/user/watched`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        slug: msg.slug,
+        episodeNumber: msg.episodeNumber,
+        minutesWatched: msg.minutesWatched
+      })
+    });
+
+    await browser.storage.local.remove(["cachedShows", "lastFetchedDate"]);
   }
 });
 

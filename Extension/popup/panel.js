@@ -1,3 +1,5 @@
+import { providers } from '../providers/index.js';
+
 const API_URL = "https://user-service.ambitiousbush-0fcd2326.centralus.azurecontainerapps.io";
 
 const showList   = document.getElementById("show-list");
@@ -9,11 +11,17 @@ const signOutBtn = document.getElementById("sign-out-btn");
 
 async function getStoredToken() 
 {
-  try {
+
+  try 
+  {
+
     const stored = await browser.storage.local.get("authToken");
     console.log("Storage result:", JSON.stringify(stored));
+
     return stored.authToken ?? null;
-  } catch (err) {
+  } catch (err) 
+  {
+
     console.error("Storage error:", err);
     return null;
   }
@@ -54,6 +62,7 @@ function todayString()
 
 function renderSchedule(shows) 
 {
+
   showList.innerHTML = "";
 
   if (!shows || shows.length === 0) 
@@ -86,19 +95,22 @@ function renderSchedule(shows)
     const stored = await browser.storage.local.get("authToken");
     const token = stored.authToken;
 
-    try {
-      // Fetch AniList ID from AnimeShedule API via backend proxy
+    try 
+    {
+
       const res = await fetch(`${API_URL}/api/schedule/anilist?slug=${slug}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const { anilistId } = await res.json();
 
-      // Find available providers
       const available = providers.filter(p => p.canHandle(anilistId));
 
       if (available.length === 0) {
         browser.tabs.create({ url: `https://animeschedule.net/anime/${slug}` });
       } else if (available.length === 1) {
+        await browser.storage.local.set({ 
+        [`slugMap_${anilistId}`]: slug 
+      });
         browser.tabs.create({ url: available[0].buildUrl(anilistId, slug, episode) });
       } else {
         // TODO: show platform picker
@@ -131,10 +143,8 @@ async function fetchSchedule(token)
 
   if (response.status === 401) 
   {
+
     return [];
-    //await clearToken();
-    //showAuthView();
-    //return;
   }
 
   if (!response.ok) throw new Error(`Server returned ${response.status}`);
@@ -152,12 +162,14 @@ async function fetchSchedule(token)
 
 async function init() 
 {
+
   await new Promise(resolve => setTimeout(resolve, 500));
   const token = await getStoredToken();
   console.log("Storage result:", JSON.stringify(await browser.storage.local.get()));
 
   if (!token) 
   {
+    
     const token = await getStoredToken();
     console.log("init token:", token ? "found" : "not found");
     showAuthView();

@@ -14,7 +14,9 @@ function createAddedBadge(slug) {
   `;
 }
 
-function attachRemoveListener(container, slug, card) {
+function attachRemoveListener(container, slug, card) 
+{
+
   const badge = container.querySelector(".tracked-badge");
   const removeOverlay = badge.querySelector(".badge-remove");
 
@@ -28,7 +30,10 @@ function attachRemoveListener(container, slug, card) {
 
   removeOverlay.addEventListener("click", async () => {
     removeOverlay.textContent = "Removing...";
-    try {
+
+    try 
+    {
+
       const stored = await browser.storage.local.get("authToken");
       const token = stored.authToken;
 
@@ -37,50 +42,83 @@ function attachRemoveListener(container, slug, card) {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
-      if (res.ok) {
+      if (res.ok) 
+      {
+
         trackedShowSlugs = trackedShowSlugs.filter(s => s !== slug);
+
         await browser.storage.local.remove("cachedShows");
         await browser.storage.local.remove("lastFetchedDate");
+
         const actionsContainer = card.querySelector(".show-actions");
         actionsContainer.innerHTML = `<button class="btn btn-primary add-btn" data-slug="${slug}" style="background-color:#af4e8a;color:white;border:none;padding:6px 12px;font-size:13px;border-radius:4px;cursor:pointer;">+ Add</button>`;
         const newBtn = actionsContainer.querySelector(".add-btn");
+
         newBtn.addEventListener("click", async () => {
           newBtn.disabled = true;
           newBtn.textContent = "Adding...";
-          try {
+
+          try 
+          {
+
             const s2 = await browser.storage.local.get("authToken");
+
             const res2 = await fetch(`${API_BASE}/api/user/tracked`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${s2.authToken}` },
               body: JSON.stringify({ slug })
             });
-            if (res2.ok || res2.status === 409) {
+
+            if (res2.ok || res2.status === 409) 
+            {
+
               trackedShowSlugs.push(slug);
+
               await browser.storage.local.remove("cachedShows");
               await browser.storage.local.remove("lastFetchedDate");
+
               actionsContainer.innerHTML = createAddedBadge(slug);
+
               attachRemoveListener(actionsContainer, slug, card);
             }
-          } catch { newBtn.textContent = "Error"; newBtn.disabled = false; }
+
+          } catch 
+          {
+             
+            newBtn.textContent = "Error"; newBtn.disabled = false; 
+          }
         });
-      } else {
+
+      } else 
+      {
+
         removeOverlay.textContent = "✕ Remove";
       }
-    } catch {
+
+    } catch 
+    {
+
       removeOverlay.textContent = "✕ Remove";
     }
+
   });
+
 }
 
-function renderShows(shows) {
+function renderShows(shows) 
+{
+
   resultsContainer.innerHTML = "";
 
-  if (!shows.length) {
+  if (!shows.length) 
+  {
+
     resultsContainer.innerHTML = `<p class="status" style="color:#6b6b6b;font-style:italic;text-align:center;">No shows found.</p>`;
     return;
   }
 
   shows.forEach(show => {
+
     const title  = show.title || "Unknown";
     const slug   = show.slug || "";
     const image  = show.imageUrl || "";
@@ -88,6 +126,7 @@ function renderShows(shows) {
     const isAlreadyTracked = trackedShowSlugs.includes(slug);
 
     const card = document.createElement("div");
+
     card.className = "show-card";
     card.setAttribute("style", "background:#f9f9fb;border:1px solid #dadadd;border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;");
 
@@ -106,16 +145,23 @@ function renderShows(shows) {
 
     const actionsContainer = card.querySelector(".show-actions");
 
-    if (isAlreadyTracked) {
+    if (isAlreadyTracked) 
+    {
+
       actionsContainer.innerHTML = createAddedBadge(slug);
       attachRemoveListener(actionsContainer, slug, card);
-    } else {
+    } else 
+    {
+
       actionsContainer.innerHTML = `<button class="btn btn-primary add-btn" data-slug="${slug}" style="background-color:#af4e8a;color:white;border:none;padding:6px 12px;font-size:13px;border-radius:4px;cursor:pointer;">+ Add</button>`;
       const btn = actionsContainer.querySelector(".add-btn");
       btn.addEventListener("click", async () => {
         btn.disabled = true;
         btn.textContent = "Adding...";
-        try {
+
+        try 
+        {
+
           const stored = await browser.storage.local.get("authToken");
           const token = stored.authToken;
           const res = await fetch(`${API_BASE}/api/user/tracked`, {
@@ -123,21 +169,31 @@ function renderShows(shows) {
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
             body: JSON.stringify({ slug })
           });
-          if (res.ok || res.status === 409) {
+
+          if (res.ok || res.status === 409) 
+          {
+
             trackedShowSlugs.push(slug);
             actionsContainer.innerHTML = createAddedBadge(slug);
             attachRemoveListener(actionsContainer, slug, card);
-          } else {
+          } else 
+          {
+
             btn.textContent = "Failed";
             btn.disabled = false;
           }
-        } catch (err) {
+
+        } catch (err) 
+        {
+          
           console.error("Add failed:", err);
           btn.textContent = "Error";
           btn.disabled = false;
         }
+
       });
     }
+
   });
 }
 
@@ -145,14 +201,20 @@ searchInput.addEventListener("input", () => {
   loadShows(searchInput.value);
 });
 
-async function loadShows(query = "") {
+async function loadShows(query = "") 
+{
+
   resultsContainer.innerHTML = `<p class="status" style="color:#6b6b6b;font-style:italic;text-align:center;">Loading…</p>`;
 
-  try {
+  try 
+  {
+
     const stored = await browser.storage.local.get("authToken");
     const token = stored.authToken;
 
-    if (!token) {
+    if (!token) 
+    {
+
       resultsContainer.innerHTML = `<p class="status" style="color:#6b6b6b;font-style:italic;text-align:center;">Please log in via the extension popup first.</p>`;
       return;
     }
@@ -166,7 +228,9 @@ async function loadShows(query = "") {
       fetch(`${API_BASE}/api/user/tracked`, { method: "GET", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } })
     ]);
 
-    if (catalogRes.status === 401 || trackedRes.status === 401) {
+    if (catalogRes.status === 401 || trackedRes.status === 401) 
+    {
+
       resultsContainer.innerHTML = `<p class="status" style="color:#6b6b6b;font-style:italic;text-align:center;">Session expired. Please sign in again through the extension popup.</p>`;
       return;
     }
@@ -179,23 +243,31 @@ async function loadShows(query = "") {
 
     const shows = Array.isArray(catalogData) ? catalogData : catalogData.shows ?? catalogData.results ?? [];
     const trackedList = Array.isArray(trackedData) ? trackedData : trackedData.shows ?? trackedData.results ?? [];
+
     trackedShowSlugs = trackedList.map(item => item.slug).filter(Boolean);
 
     renderShows(shows);
 
-  } catch (err) {
+  } catch (err) 
+  {
+  
     console.error("loadShows failed:", err);
     resultsContainer.innerHTML = `<p class="status" style="color:#6b6b6b;font-style:italic;text-align:center;">Could not load shows. Check your API connection.</p>`;
   }
 }
 
-async function loadSidebar() {
+async function loadSidebar() 
+{
+
   const sidebarEl = document.getElementById("sidebar-schedule");
   if (!sidebarEl) return;
 
-  try {
+  try 
+  {
+
     const stored = await browser.storage.local.get("authToken");
     const token = stored.authToken;
+
     if (!token) { sidebarEl.innerHTML = `<p class="sidebar-loading">Sign in to see today's schedule.</p>`; return; }
 
     const res = await fetch(`${API_BASE}/api/schedule/today`, {
@@ -217,7 +289,9 @@ async function loadSidebar() {
       </div>
     `).join("");
 
-  } catch {
+  } catch 
+  {
+  
     sidebarEl.innerHTML = `<p class="sidebar-loading">Could not load schedule.</p>`;
   }
 }

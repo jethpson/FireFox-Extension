@@ -35,6 +35,7 @@ var seen = new HashSet<(string, int)>();
 
 foreach (var item in data.EnumerateArray())
 {
+
     var episodeDateRaw = item.GetProperty("episodeDate").GetString() ?? "";
     if (!episodeDateRaw.StartsWith(todayStr)) continue;
 
@@ -52,12 +53,13 @@ foreach (var item in data.EnumerateArray())
     if (seen.Contains(key)) continue;
     seen.Add(key);
 
-    // Update or insert into catalog with correct image URL
     var existing = await db.AnimeCatalog.FirstOrDefaultAsync(a => a.Slug == slug);
     if (existing == null)
     {
+
         db.AnimeCatalog.Add(new AnimeCatalog
         {
+
             Slug = slug,
             Title = title,
             ImageUrl = imageUrl,
@@ -67,6 +69,7 @@ foreach (var item in data.EnumerateArray())
     }
     else
     {
+
         existing.ImageUrl = imageUrl;
         existing.UpdatedAt = DateTime.UtcNow;
     }
@@ -76,8 +79,10 @@ foreach (var item in data.EnumerateArray())
 
     if (!scheduleExists)
     {
+
         db.DailySchedule.Add(new DailySchedule
         {
+            
             Slug = slug,
             EpisodeNumber = episode,
             AirDate = today

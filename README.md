@@ -114,6 +114,10 @@ export default {
 }
 ```
 
+## Install
+
+Download the latest release from the [Releases page](https://github.com/jethpson/FireFox-Extension/releases) and load it as a temporary add-on in Firefox via `about:debugging`.
+
 ## Planned
 
 - Additional streaming providers

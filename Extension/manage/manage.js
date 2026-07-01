@@ -39,6 +39,8 @@ function attachRemoveListener(container, slug, card) {
 
       if (res.ok) {
         trackedShowSlugs = trackedShowSlugs.filter(s => s !== slug);
+        await browser.storage.local.remove("cachedShows");
+        await browser.storage.local.remove("lastFetchedDate");
         const actionsContainer = card.querySelector(".show-actions");
         actionsContainer.innerHTML = `<button class="btn btn-primary add-btn" data-slug="${slug}" style="background-color:#af4e8a;color:white;border:none;padding:6px 12px;font-size:13px;border-radius:4px;cursor:pointer;">+ Add</button>`;
         const newBtn = actionsContainer.querySelector(".add-btn");
@@ -54,6 +56,8 @@ function attachRemoveListener(container, slug, card) {
             });
             if (res2.ok || res2.status === 409) {
               trackedShowSlugs.push(slug);
+              await browser.storage.local.remove("cachedShows");
+              await browser.storage.local.remove("lastFetchedDate");
               actionsContainer.innerHTML = createAddedBadge(slug);
               attachRemoveListener(actionsContainer, slug, card);
             }

@@ -56,6 +56,27 @@ public class ScheduleController : ControllerBase
         return Ok(results);
     }
 
+    [HttpGet("anilist")]
+    public async Task<IActionResult> GetAnilistId([FromQuery] string slug)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Authorization", "Bearer PZ5V2e7A4o49aM77apjz5JJ6MHrqee");
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+        var response = await client.GetFromJsonAsync<JsonElement>(
+            $"https://animeschedule.net/api/v3/anime/{slug}");
+
+        if (!response.TryGetProperty("websites", out var websites))
+            return NotFound();
+
+        var anilistUrl = websites.TryGetProperty("aniList", out var al) ? al.GetString() : null;
+        if (anilistUrl == null) return NotFound();
+
+        var anilistId = anilistUrl.Split("/anime/").ElementAtOrDefault(1)?.Split("/").FirstOrDefault();
+
+        return Ok(new { anilistId, slug });
+    }
+
     [HttpGet("my-today")]
     public async Task<IActionResult> GetMyToday()
     {

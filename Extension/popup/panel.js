@@ -72,6 +72,8 @@ function renderSchedule(shows)
     li.style.display = "flex";
     li.style.alignItems = "center";
     li.style.gap = "10px";
+    li.style.cursor = "pointer";
+    li.title = "Click to watch (link coming soon)";
     li.innerHTML = `
       <img src="${image}" alt="${title}" style="width:48px;height:48px;border-radius:4px;object-fit:cover;flex-shrink:0;">
       <div>
@@ -79,6 +81,33 @@ function renderSchedule(shows)
         <small>Episode ${episode}</small>
       </div>
     `;
+
+    li.addEventListener("click", async () => {
+    const stored = await browser.storage.local.get("authToken");
+    const token = stored.authToken;
+
+    try {
+      // Fetch AniList ID from AnimeShedule API via backend proxy
+      const res = await fetch(`${API_URL}/api/schedule/anilist?slug=${slug}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const { anilistId } = await res.json();
+
+      // Find available providers
+      const available = providers.filter(p => p.canHandle(anilistId));
+
+      if (available.length === 0) {
+        browser.tabs.create({ url: `https://animeschedule.net/anime/${slug}` });
+      } else if (available.length === 1) {
+        browser.tabs.create({ url: available[0].buildUrl(anilistId, slug, episode) });
+      } else {
+        // TODO: show platform picker
+      }
+    } catch {
+      browser.tabs.create({ url: `https://animeschedule.net/anime/${slug}` });
+    }
+  });
+
     showList.appendChild(li);
   });
 }

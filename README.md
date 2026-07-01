@@ -1,68 +1,90 @@
-# Anime Tracker - Firefox Extension + Azure Microservices Platform
+# Anime Tracker — Firefox Extension + Azure Microservices Platform
 
-A Firefox browser extension that tracks daily anime releases and notifies users when episodes from their followed series air. Built as a distributed system on Azure, with a Firefox extension frontend, multiple backend services, and a fully automated CI/CD pipeline.
+A Firefox browser extension that tracks daily anime releases, notifies users when episodes from their followed series air, and opens the right streaming page at the right episode — automatically.
+
+Built as a distributed system on Azure with independently deployable services, a fully automated CI/CD pipeline, and a modular streaming provider architecture that makes adding new sites a one-file change.
+
+## Screenshots
+
+**Database schema**
+
+[![Database schema](https://drive.google.com/uc?export=view&id=1UITmOekanWsNpEodd3le-v77nmxQX3W4)](https://drive.google.com/file/d/1UITmOekanWsNpEodd3le-v77nmxQX3W4/view?usp=sharing)
+
+**Sign in**
+
+[![Sign in popup](https://drive.google.com/uc?export=view&id=1Gq2ZkIWNtutItv3yJu-HCfzWkaC1PvFP)](https://drive.google.com/file/d/1Gq2ZkIWNtutItv3yJu-HCfzWkaC1PvFP/view?usp=sharing)
+
+**Today's unwatched tracked shows**
+
+[![Popup schedule](https://drive.google.com/uc?export=view&id=1P_iXyveP_6RH_S9U4gxO-oSpBq1YijTY)](https://drive.google.com/file/d/1P_iXyveP_6RH_S9U4gxO-oSpBq1YijTY/view?usp=sharing)
+
+**Manage shows — search, sidebar schedule, add/remove tracking**
+
+[![Manage page](https://drive.google.com/uc?export=view&id=1V8TDY-GilIrkM3Ycovd8yiG2t4ZbH67a)](https://drive.google.com/file/d/1V8TDY-GilIrkM3Ycovd8yiG2t4ZbH67a/view?usp=sharing)
 
 ## What it does
 
-Every day, a scheduled Azure Container Apps Job pulls the day's anime release schedule from a third-party API and syncs it into a shared Azure SQL database. Users sign in through Microsoft authentication, search and follow series they're interested in, and the extension surfaces only the shows airing today that they haven't watched yet. Watch detection works by measuring time spent on a streaming page - under five minutes is treated as a misclick rather than an actual watch.
+Every day at midnight UTC, a scheduled Azure Container Apps Job pulls the day's anime release schedule from a third-party API and syncs it into a shared Azure SQL database. Users sign in through Microsoft Entra, search the full catalog of ~19,000 titles, and follow the series they want to track.
+
+The popup surfaces only the shows airing today that the user hasn't watched yet. Clicking a show resolves the correct streaming link via a backend proxy — the extension queries AnimeShedule's API for the show's AniList ID, passes it to a modular streaming provider, and opens the right episode directly. Watch detection runs as a content script: if the user stays on a streaming page for five or more minutes, the episode is logged as watched and removed from the popup automatically. Under five minutes is treated as a misclick.
 
 ## Architecture
 
-The system is split into independently deployable services rather than a single monolith, communicating over REST and sharing a central Azure SQL database.
-
-**Firefox Extension** (TypeScript/JavaScript)
-Handles sign-in via Microsoft identity, displays the day's unwatched tracked shows in the popup, and provides a management page for searching the full anime catalog and adding or removing tracked series.
+**Firefox Extension** (JavaScript, WebExtensions API)
+Sign-in via Microsoft identity, popup showing today's unwatched tracked shows with one-click streaming, a management page for browsing and tracking series, browser notifications when tracked shows air, and a content script for passive watch-time detection.
 
 **User Service** (ASP.NET Core / C#)
-REST API exposing endpoints for authentication, tracked series, watch history, and schedule reads. Backed by Entity Framework Core against Azure SQL.
+REST API for authentication, tracked series, watch history, schedule reads, and streaming link resolution via a backend proxy to AnimeShedule. Backed by Entity Framework Core against Azure SQL.
 
 **Schedule Sync Job** (.NET console app, Azure Container Apps Job)
-Runs on a daily cron schedule, calling an external anime schedule API and writing the day's releases into the shared database. Decoupled entirely from the user-facing API - if this job fails, the rest of the system keeps working off the last successful sync.
+Daily cron job that calls the AnimeShedule API and writes the day's releases into the shared database. Completely decoupled from the user-facing API — if the sync fails, the rest of the system keeps running off the last successful data.
 
 **Azure SQL Database**
-Shared persistent store for users, tracked series, watch history, the daily schedule, and the full anime catalog (~19,000 titles) that grows every release.
+Shared persistent store for users, tracked series, watch history, the daily schedule, and the full anime catalog.
+
+## Streaming Provider System
+
+The extension ships with a modular provider architecture in `Extension/providers/`. Each provider is a single file that implements whether it can handle a given show and how to construct the watch URL from an AniList ID, slug, and episode number.
+
+```javascript
+// miruro.source.js
+export default {
+  name: "Miruro",
+  canHandle: (anilistId) => !!anilistId,
+  buildUrl: (anilistId, slug, episode) =>
+    `https://www.miruro.to/watch/${anilistId}/${slug}?ep=${episode}`
+}
+```
+
+Adding support for a new streaming site is one file. The AniList ID is resolved at click time via a backend call to AnimeShedule's API, so no additional database columns or reseeding is required.
 
 ## Infrastructure
 
-- **Azure Container Apps** - hosts the user service with staging and production revisions, traffic-shifted automatically on deploy (blue/green style)
-- **Azure Container Apps Jobs** - runs the schedule sync as a scheduled, stateless job rather than a long-running service
-- **Azure Container Registry** - stores Docker images built by CI/CD
-- **Azure SQL Database** - relational store for all application data
-- **Azure Storage Account** - backing store required by the Container Apps Jobs runtime
-- **Microsoft Entra ID** - handles user authentication; the application never stores passwords
-- **Bicep** - infrastructure defined as code in `infrastructure/bicep/`. Initial resources were provisioned through the Azure Portal during early development and later formalized as Bicep for reproducibility
+- **Azure Container Apps** — hosts the user service with staging and production revisions, traffic-shifted automatically on every deploy
+- **Azure Container Apps Jobs** — runs the schedule sync as a scheduled, stateless container job
+- **Azure Container Registry** — stores Docker images built and pushed by CI/CD
+- **Azure SQL Database** — relational store for all application data
+- **Azure Storage Account** — backing store for the Container Apps Jobs runtime
+- **Microsoft Entra ID** — handles user authentication; the application never stores passwords
+- **Bicep** — infrastructure defined as code in `infrastructure/bicep/`, formalizing the Azure environment for reproducibility
 
 ## CI/CD
 
 GitHub Actions runs on every push to `main`:
 
-1. **CI** - restores, builds, and runs the xUnit test suite against an in-memory EF Core database
-2. **CD** - builds a Docker image tagged with the commit SHA, pushes it to Azure Container Registry, deploys it to a new staging revision, then shifts 100% of traffic to that revision once it's live
-3. Old revisions are deactivated automatically after each deploy to keep the environment clean
+1. **CI** — restores, builds, and runs the xUnit test suite against an in-memory EF Core database
+2. **CD** — builds a Docker image tagged with the commit SHA, pushes it to Azure Container Registry, deploys it to a new staging revision on Azure Container Apps, then shifts 100% of traffic to that revision
+3. Old revisions are deactivated automatically after each deploy
 
-## Screenshots
+## Database Schema
 
-**Database schema**
-[![Database schema](https://drive.google.com/uc?export=view&id=1UITmOekanWsNpEodd3le-v77nmxQX3W4)](https://drive.google.com/file/d/1UITmOekanWsNpEodd3le-v77nmxQX3W4/view?usp=sharing)
+- `users` — accounts linked to Microsoft Entra object IDs; no passwords stored
+- `anime_catalog` — full catalog of ~19,000 titles, seeded once and updated daily as new shows air
+- `daily_schedule` — episodes airing on a given date, referenced by slug
+- `tracked_series` — per-user list of followed shows
+- `watch_history` — per-episode records with `minutes_watched`; entries under 5 minutes are treated as misclicks and do not remove shows from the popup
 
-**Sign in**
-[![Sign in popup](https://drive.google.com/uc?export=view&id=1Gq2ZkIWNtutItv3yJu-HCfzWkaC1PvFP)](https://drive.google.com/file/d/1Gq2ZkIWNtutItv3yJu-HCfzWkaC1PvFP/view?usp=sharing)
-
-**Today's unwatched tracked shows**
-[![Popup schedule](https://drive.google.com/uc?export=view&id=1P_iXyveP_6RH_S9U4gxO-oSpBq1YijTY)](https://drive.google.com/file/d/1P_iXyveP_6RH_S9U4gxO-oSpBq1YijTY/view?usp=sharing)
-
-**Manage shows - search, sidebar schedule, add/remove tracking**
-[![Manage page](https://drive.google.com/uc?export=view&id=1V8TDY-GilIrkM3Ycovd8yiG2t4ZbH67a)](https://drive.google.com/file/d/1V8TDY-GilIrkM3Ycovd8yiG2t4ZbH67a/view?usp=sharing)
-
-## Database schema
-
-- `users` - accounts linked to Microsoft Entra identities
-- `anime_catalog` - full catalog of tracked-able series, synced and updated by the daily job
-- `daily_schedule` - episodes airing on a given date, references the catalog by slug
-- `tracked_series` - which series a user follows
-- `watch_history` - per-episode watch records, including minutes watched for the five-minute watch-detection rule
-
-## Local development
+## Local Development
 
 ```bash
 cd services/user-service
@@ -77,12 +99,24 @@ cd services/user-service.Tests
 dotnet test
 ```
 
-Load the extension unpacked in Firefox via `about:debugging` → This Firefox → Load Temporary Add-on → select `Extension/manifest.json`.
+Load the extension in Firefox via `about:debugging` → This Firefox → Load Temporary Add-on → select `Extension/manifest.json`.
 
-## Adding a new schedule data source
+## Adding a New Streaming Provider
 
-The system is designed so the upstream data provider can be swapped without touching the rest of the application. To add a new source, implement the provider interface in `Extension/providers/` and update the schedule sync job to call it - the database schema and API layer require no changes.
+Create a file in `Extension/providers/` implementing the provider interface, then register it in `index.js`. No backend changes, no database changes.
 
-## Status
+```javascript
+export default {
+  name: "YourSite",
+  canHandle: (anilistId) => !!anilistId,
+  buildUrl: (anilistId, slug, episode) =>
+    `https://yoursite.com/watch/${anilistId}/${slug}?ep=${episode}`
+}
+```
 
-Core functionality - authentication, daily schedule sync, tracked series, search, and CI/CD with staging/production deploys - is complete and running in Azure. Browser notifications and full automated test coverage across all services are in progress.
+## Planned
+
+- Additional streaming providers
+- Episode-level deep links where site URLs support it
+- Expanded test coverage across all services
+- Platform picker UI when multiple providers match a show
